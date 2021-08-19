@@ -34,7 +34,7 @@ import serial
 
 test1 = b'\xE6\x00'
 serialDataBuffer1 = b'\xAA\x10\xE6\x00\xE0\x2E\x64\x00\xC8\x00\x2C\x01\x90\x01\xF4\x01\x58\x02\xBC\x02\x20\x03\x84\x03\xE8\x03\x4C\x04\xB0\x04\x14\x05\x78\x05\xDC\x05\xFB\xD5'
-serialDataBuffer2 = b'\xAA\x11\xC0\xD4\x01\x00\0xE8\x03\x00\x00\xD0\x07\x00\x00\0xB8\x0B\x00\x00\0xA0\x0F\x00\x00\x88\x13\x00\x00\x70\x17\x00\x00\x58\x1B\x00\x00\x40\x1F\x00\x00\x28\x23\x00\x00\0x10\x27\x00\x00\0xF8\x2A\x00\x00\0xE0\x2E\x00\x00\xC8\x32\x00\x00\xB0\x36\x00\x00\x98\x3A\x00\x00\x21\x80'
+serialDataBuffer2 = b'\xAA\x11\xC0\xD4\x01\x00\xE8\x03\x00\x00\xD0\x07\x00\x00\xB8\x0B\x00\x00\xA0\x0F\x00\x00\x88\x13\x00\x00\x70\x17\x00\x00\x58\x1B\x00\x00\x40\x1F\x00\x00\x28\x23\x00\x00\x10\x27\x00\x00\xF8\x2A\x00\x00\xE0\x2E\x00\x00\xC8\x32\x00\x00\xB0\x36\x00\x00\x98\x3A\x00\x00\x21\x80'
 serialDataBuffer3 = b'\xAA\x12\xFF\x00\x00'
 #data sample to test with
 
@@ -71,18 +71,35 @@ def checkID(data):
     }
     return switch.get(data, 'null')
 
+def processID(id, data):
+    switch={
+    b'\x10':processLivePower(data),
+    b'\x11':processAccEnergy(data),
+    b'\x12':processFirmware(data)
+    }
+    return switch.get(id, 'null')
+
 def processLivePower(data):
-    newData = struct.unpack('<' + 'H', data)
+    print(data)
+    newData = struct.unpack('<' + 'H'*int(livePowerBuffSize/2), data)
     print(newData)
+    return newData
 
 def processAccEnergy(data):
+    print(data)
+    newData = struct.unpack('<' + 'L'*int(accEnergyBuffSize/4), data)
+    print(newData)
+    return newData
 
 def processFirmware(data):
+    print(data)
+    return
 
 
 try:
     cbiSerial = serial.Serial('/dev/ttyUSB0', baudrate=2400, timeout=0.5)  # open first serial port
     cbiSerial.write(serialDataBuffer1)
+    cbiSerial.write(serialDataBuffer2)
 except:
     print("COM PORT NOT OPEN!!!")
     quit()
@@ -91,26 +108,32 @@ except:
 buffer = bytearray(0)
 
 while True:
-    if (cbiSerial.inWaiting()): #or rather read amoutn waiting and check through the list for a start ID, over just flushing the buffer
-        if (cbiSerial.read()==packetStartID):
-            ID = cbiSerial.read()
+    if (cbiSerial.inWaiting()): #check to see if data is waiting. alternitably rather read amoutn waiting and check through the list for a start ID, over just flushing the buffer
+        if (cbiSerial.read()==packetStartID): #check if first byte is the start ID
+            ID = cbiSerial.read() #reads the next byte in buffer, expected to be the ID
             print(ID)
-            packetSize = checkID(ID)
-            if (packetSize == 'null'):
+            packetSize = checkID(ID)  #get the packet size for the correspoding ID
+            if (packetSize == 'null'): #check if the extracted ID is valid
                 print("invalid packet ID")
                 cbiSerial.flush()
                 pass
             print(packetSize)
             buffer = cbiSerial.read(packetSize+2)
             print(buffer)
-            print(testCRC(buffer))
             if (testCRC(buffer)):
-
+                data = buffer[:-2] #remove crc data before passing on for value conversion
+#                processID(ID, data)
+                if (packetSize==livePowerBuffSize):
+                    print(processLivePower(data))
+                elif (packetSize==accEnergyBuffSize):
+                    print(processAccEnergy(data))
+                elif (packetSize==firmwareBuffSize):
+                    print(data)
+                print("done")
             else:
                 print("CRC check failed")
                 cbiSerial.flush()
-
-            quit()
+                pass
     else:
         cbiSerial.flush()
         time.sleep(1)
