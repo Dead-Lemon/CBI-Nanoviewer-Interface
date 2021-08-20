@@ -71,22 +71,12 @@ def checkID(data):
     }
     return switch.get(data, 'null')
 
-def processID(id, data):
-    switch={
-    b'\x10':processLivePower(data),
-    b'\x11':processAccEnergy(data),
-    b'\x12':processFirmware(data)
-    }
-    return switch.get(id, 'null')
-
 def processLivePower(data):
-    print(data)
     newData = struct.unpack('<' + 'H'*int(livePowerBuffSize/2), data)
     print(newData)
     return newData
 
 def processAccEnergy(data):
-    print(data)
     newData = struct.unpack('<' + 'L'*int(accEnergyBuffSize/4), data)
     print(newData)
     return newData
@@ -98,18 +88,19 @@ def processFirmware(data):
 
 try:
     cbiSerial = serial.Serial('/dev/ttyUSB0', baudrate=2400, timeout=0.5)  # open first serial port
+    cbiSerial.write(test1)
     cbiSerial.write(serialDataBuffer1)
     cbiSerial.write(serialDataBuffer2)
 except:
-    print("COM PORT NOT OPEN!!!")
+    print("Unable to open /dev/ttyUSB0")
     quit()
 
 
 buffer = bytearray(0)
 
 while True:
-    if (cbiSerial.inWaiting()): #check to see if data is waiting. alternitably rather read amoutn waiting and check through the list for a start ID, over just flushing the buffer
-        if (cbiSerial.read()==packetStartID): #check if first byte is the start ID
+    if (cbiSerial.inWaiting()):
+        if (cbiSerial.read()==packetStartID): #check if first byte in serial buffer is the start ID, will continue to loop until the buffer is empty or detects 0xAA startID
             ID = cbiSerial.read() #reads the next byte in buffer, expected to be the ID
             print(ID)
             packetSize = checkID(ID)  #get the packet size for the correspoding ID
@@ -118,22 +109,20 @@ while True:
                 cbiSerial.flush()
                 pass
             print(packetSize)
-            buffer = cbiSerial.read(packetSize+2)
+            buffer = cbiSerial.read(packetSize+2) #reads the exact buffer size for packet type and CRC from serial
             print(buffer)
             if (testCRC(buffer)):
                 data = buffer[:-2] #remove crc data before passing on for value conversion
-#                processID(ID, data)
-                if (packetSize==livePowerBuffSize):
-                    print(processLivePower(data))
-                elif (packetSize==accEnergyBuffSize):
-                    print(processAccEnergy(data))
-                elif (packetSize==firmwareBuffSize):
-                    print(data)
+                processPacket = {
+                    b'\x10':processLivePower,
+                    b'\x11':processAccEnergy,
+                    b'\x12':processFirmware
+                    }
+                processPacket[ID](data)
                 print("done")
             else:
                 print("CRC check failed")
                 cbiSerial.flush()
                 pass
     else:
-        cbiSerial.flush()
         time.sleep(1)
