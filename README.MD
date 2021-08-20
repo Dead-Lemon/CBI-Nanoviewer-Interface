@@ -1,9 +1,9 @@
-#CBI NanoHub interface
+# CBI NanoHub interface
 
 Initial implementation based off of protocol spec
 Only tested with sample data
 
-###Todo
+### Todo
 *influxDB connection
 *MQTT client
 
