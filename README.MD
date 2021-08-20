@@ -4,8 +4,8 @@ Initial implementation based off of protocol spec
 Only tested with sample data
 
 ### Todo
-*influxDB connection
-*MQTT client
+* influxDB connection
+* MQTT client
 
 ### Protocal Spec
 
