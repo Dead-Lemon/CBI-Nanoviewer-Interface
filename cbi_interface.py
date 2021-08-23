@@ -57,7 +57,7 @@ def Checksum(data):
 def testCRC(data):
     packetCRC1 = data[-2]
     packetCRC2 = data[-1]
-    answer = Checksum(data[:-2])
+    answer = Checksum(data[:-2]) #sends only data, removing 2 CRC bytes off the end
     if ((packetCRC1 == answer[0]) & (packetCRC2 == answer[1])):
         return True
     else:
@@ -104,13 +104,13 @@ while True:
             ID = cbiSerial.read() #reads the next byte in buffer, expected to be the ID
             print(ID)
             packetSize = checkID(ID)  #get the packet size for the correspoding ID
-            if (packetSize == 'null'): #check if the extracted ID is valid
+            if (packetSize == 'null'): #check if the extracted ID is invalid
                 print("invalid packet ID")
                 cbiSerial.flush()
                 pass
-            print(packetSize)
+            #print(packetSize)
             buffer = cbiSerial.read(packetSize+2) #reads the exact buffer size for packet type and CRC from serial
-            print(buffer)
+            #print(buffer)
             if (testCRC(buffer)):
                 data = buffer[:-2] #remove crc data before passing on for value conversion
                 processPacket = {
