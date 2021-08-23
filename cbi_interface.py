@@ -92,11 +92,25 @@ def processLivePower(data):
     print(newData)
     point = Point("measurement").tag("Location", "DB1").field("Voltage", newData[0]).time(datetime.utcnow(), WritePrecision.NS)
     write_api.write(influxConfig['bucket'], influxConfig['org'], point)
+    pointBuffer = []
+    loopNum = 1
+    for i in newData[1:]:
+        fieldname = "Power " + str(loopNum)
+        print(fieldname)
+        pointBuffer.append(Point("measurement").tag("Location", "DB1").field(fieldname, i).time(datetime.utcnow(), WritePrecision.NS))
+        loopNum+=1
+    write_api.write(influxConfig['bucket'], influxConfig['org'], pointBuffer)
 
 def processAccEnergy(data):
     newData = struct.unpack('<' + 'L'*int(accEnergyBuffSize/4), data)
-    print(newData)
-    return newData
+    pointBuffer = []
+    loopNum = 1
+    for i in newData[1:]:
+        fieldname = "Total " + str(loopNum)
+        print(fieldname)
+        pointBuffer.append(Point("measurement").tag("Location", "DB1").field(fieldname, i).time(datetime.utcnow(), WritePrecision.NS))
+        loopNum+=1
+    write_api.write(influxConfig['bucket'], influxConfig['org'], pointBuffer)
 
 def processFirmware(data):
     print(data)
