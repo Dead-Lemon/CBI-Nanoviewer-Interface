@@ -31,6 +31,24 @@ Protocal Spec
 import struct
 import time
 import serial
+import configparser
+from datetime import datetime
+
+from influxdb_client import InfluxDBClient, Point, WritePrecision
+from influxdb_client.client.write_api import SYNCHRONOUS
+
+#import config
+configPars = configparser.ConfigParser()
+try:
+    configPars.read_file(open('config.ini')) #trys to open set config file
+except:
+    print("Failed to find", configDir) #if cannot open config file
+    sys.exit()
+
+influxConfig = dict(configPars.items('influx2'))
+
+client = InfluxDBClient(url=influxConfig['url'], token=influxConfig['token'], org=influxConfig['org'])
+write_api = client.write_api(write_options=SYNCHRONOUS)
 
 test1 = b'\xE6\x00'
 serialDataBuffer1 = b'\xAA\x10\xE6\x00\xE0\x2E\x64\x00\xC8\x00\x2C\x01\x90\x01\xF4\x01\x58\x02\xBC\x02\x20\x03\x84\x03\xE8\x03\x4C\x04\xB0\x04\x14\x05\x78\x05\xDC\x05\xFB\xD5'
@@ -38,13 +56,11 @@ serialDataBuffer2 = b'\xAA\x11\xC0\xD4\x01\x00\xE8\x03\x00\x00\xD0\x07\x00\x00\x
 serialDataBuffer3 = b'\xAA\x12\xFF\x00\x00'
 #data sample to test with
 
-livePowerBuffSize = int(34) #number of bytes
+livePowerBuffSize = int(34) #number of bytes for packet type
 accEnergyBuffSize = int(64)
 firmwareBuffSize = int(1)
 
 packetStartID = b'\xAA'
-testarray = bytearray(0)
-
 
 def Checksum(data):
     crc1 = 0
@@ -74,7 +90,8 @@ def checkID(data):
 def processLivePower(data):
     newData = struct.unpack('<' + 'H'*int(livePowerBuffSize/2), data)
     print(newData)
-    return newData
+    point = Point("measurement").tag("Location", "DB1").field("Voltage", newData[0]).time(datetime.utcnow(), WritePrecision.NS)
+    write_api.write(influxConfig['bucket'], influxConfig['org'], point)
 
 def processAccEnergy(data):
     newData = struct.unpack('<' + 'L'*int(accEnergyBuffSize/4), data)
@@ -112,7 +129,7 @@ while True:
             buffer = cbiSerial.read(packetSize+2) #reads the exact buffer size for packet type and CRC from serial
             #print(buffer)
             if (testCRC(buffer)):
-                data = buffer[:-2] #remove crc data before passing on for value conversion
+                data = buffer[:-2] #remove crc data before passing on for unpacking
                 processPacket = {
                     b'\x10':processLivePower,
                     b'\x11':processAccEnergy,

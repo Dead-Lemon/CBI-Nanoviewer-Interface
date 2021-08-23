@@ -1,7 +1,12 @@
 # CBI NanoHub interface
 
 Initial implementation based off of protocol spec
-Only tested with sample data
+[Nanoview](http://nanoview.co.za/protocol.html)
+
+## Requirements
+
+- pySerial
+- influxdb-client[ciso]
 
 ### Todo
 * influxDB connection
@@ -34,5 +39,3 @@ Only tested with sample data
 * Checksum (2x unsigned chars):
   - CRC1 (unsigned char)
   - CRC2 (unsigned char)
-
-
