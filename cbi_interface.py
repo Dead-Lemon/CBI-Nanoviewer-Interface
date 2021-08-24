@@ -37,15 +37,18 @@ from datetime import datetime
 from influxdb_client import InfluxDBClient, Point, WritePrecision
 from influxdb_client.client.write_api import SYNCHRONOUS
 
+
 #import config
 configPars = configparser.ConfigParser()
 try:
     configPars.read_file(open('config.ini')) #trys to open set config file
 except:
-    print("Failed to find", configDir) #if cannot open config file
+    print("Failed to find config.ini") #if cannot open config file
     sys.exit()
 
 influxConfig = dict(configPars.items('influx2'))
+labelConfig = dict(configPars.items('labels'))
+serialConfig = dict(configPars.items('serial'))
 
 client = InfluxDBClient(url=influxConfig['url'], token=influxConfig['token'], org=influxConfig['org'])
 write_api = client.write_api(write_options=SYNCHRONOUS)
@@ -87,43 +90,36 @@ def checkID(data):
     }
     return switch.get(data, 'null')
 
-def processLivePower(data):
-    newData = struct.unpack('<' + 'H'*int(livePowerBuffSize/2), data)
-    print(newData)
-    point = Point("measurement").tag("Location", "DB1").field("Voltage", newData[0]).time(datetime.utcnow(), WritePrecision.NS)
-    write_api.write(influxConfig['bucket'], influxConfig['org'], point)
+def submitData(data, fieldname):
     pointBuffer = []
     loopNum = 1
-    for i in newData[1:]:
-        fieldname = "Power " + str(loopNum)
-        print(fieldname)
-        pointBuffer.append(Point("measurement").tag("Location", "DB1").field(fieldname, i).time(datetime.utcnow(), WritePrecision.NS))
+    for i in data:
+        newfieldname = fieldname + str(loopNum)
+        pointBuffer.append(Point(labelConfig['measurement']).tag("Location", labelConfig['location']).field(newfieldname, i).time(datetime.utcnow(), WritePrecision.NS))
         loopNum+=1
     write_api.write(influxConfig['bucket'], influxConfig['org'], pointBuffer)
 
+def processLivePower(data):
+    newData = struct.unpack('<' + 'H'*int(livePowerBuffSize/2), data)
+    point = Point(labelConfig['measurement']).tag("Location", labelConfig['location']).field("Voltage", newData[0]).time(datetime.utcnow(), WritePrecision.NS)
+    write_api.write(influxConfig['bucket'], influxConfig['org'], point)
+    submitData(newData[1:], "Power ")
+
 def processAccEnergy(data):
     newData = struct.unpack('<' + 'L'*int(accEnergyBuffSize/4), data)
-    pointBuffer = []
-    loopNum = 1
-    for i in newData[1:]:
-        fieldname = "Total " + str(loopNum)
-        print(fieldname)
-        pointBuffer.append(Point("measurement").tag("Location", "DB1").field(fieldname, i).time(datetime.utcnow(), WritePrecision.NS))
-        loopNum+=1
-    write_api.write(influxConfig['bucket'], influxConfig['org'], pointBuffer)
+    submitData(newData, "Total ")
 
 def processFirmware(data):
     print(data)
     return
 
-
 try:
-    cbiSerial = serial.Serial('/dev/ttyUSB0', baudrate=2400, timeout=0.5)  # open first serial port
+    cbiSerial = serial.Serial(serialConfig['device'], baudrate=2400, timeout=0.5)  # open first serial port
     cbiSerial.write(test1)
     cbiSerial.write(serialDataBuffer1)
     cbiSerial.write(serialDataBuffer2)
 except:
-    print("Unable to open /dev/ttyUSB0")
+    print("Unable to open ", serialConfig['device'])
     quit()
 
 
@@ -133,7 +129,7 @@ while True:
     if (cbiSerial.inWaiting()):
         if (cbiSerial.read()==packetStartID): #check if first byte in serial buffer is the start ID, will continue to loop until the buffer is empty or detects 0xAA startID
             ID = cbiSerial.read() #reads the next byte in buffer, expected to be the ID
-            print(ID)
+            #print(ID)
             packetSize = checkID(ID)  #get the packet size for the correspoding ID
             if (packetSize == 'null'): #check if the extracted ID is invalid
                 print("invalid packet ID")
