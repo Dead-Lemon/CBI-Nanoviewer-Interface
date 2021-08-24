@@ -1,16 +1,11 @@
-# CBI NanoHub interface
+# CBI Nanoviewer inFluxDB interface
 
-Initial implementation based off of protocol spec
-[Nanoview](http://nanoview.co.za/protocol.html)
+inFluxDB Power logger using Serial decoding interface from [CBi Nanoview](http://nanoview.co.za/protocol.html)
 
 ## Requirements
 
 - pySerial
 - influxdb-client[ciso]
-
-### Todo
-* influxDB connection
-* MQTT client
 
 ### Protocal Spec
 
