@@ -1,0 +1,12 @@
+[Unit]
+Description=CBi Nanoview influx logger
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /opt/cbi/cbi_interface.py
+WorkingDirectory=/opt/cbi/
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=sysinit.target

@@ -1,0 +1,32 @@
+version: '3'
+services:
+  influxdb:
+    image: 'influxdb:2.0'
+    restart: unless-stopped
+# Uncomment enviroment vars if creating a new DB on first run.
+#    environment:
+#      - DOCKER_INFLUXDB_INIT_MODE=setup
+#      - DOCKER_INFLUXDB_INIT_USERNAME=lemon
+#      - DOCKER_INFLUXDB_INIT_PASSWORD=lemon
+#      - DOCKER_INFLUXDB_INIT_ORG=LemonCorp
+#      - DOCKER_INFLUXDB_INIT_BUCKET=logger-bucket
+#      - DOCKER_INFLUXDB_INIT_RETENTION=12w
+    volumes:
+      - ./influx/data:/var/lib/influxdb2
+      - ./influx/config:/etc/influxdb2
+    ports:
+      - 8086:8086
+
+  grafana:
+    image: grafana/grafana
+    container_name: grafana
+    restart: unless-stopped
+    environment:
+      - PUID=1000
+      - PGID=1000
+    ports:
+      - 3000:3000
+    links:
+      - influxdb
+    volumes:
+      - ./grafana/data:/var/lib/grafana
