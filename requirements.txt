@@ -1,0 +1,4 @@
+#### Requirements for python ####
+
+pySerial
+influxdb-client[ciso]
